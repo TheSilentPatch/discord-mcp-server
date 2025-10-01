@@ -298,18 +298,6 @@ async def get_user_info(user_id: int, ctx: Context[ServerSession, None]) -> Dict
         await ctx.error(f"Failed to get user info: {result.get('error')}")
     return result
 
-# @mcp.tool()
-# async def list_servers(ctx: Context[ServerSession, None]) -> List[Dict[str, Any]]:
-#     """List all servers (guilds) the bot is in"""
-#     await ctx.info("Listing servers")
-#     result = await tools.list_servers()
-#     if "error" not in result:
-#         await ctx.info(f"Retrieved {len(result)} servers")
-#         return result
-#     else:
-#         await ctx.error(f"Failed to list servers: {result.get('error')}")
-#         return []
-
 @mcp.resource("servers://list")
 async def list_servers_resource(ctx: Context[None, None]) -> List[Dict[str, Any]]:
     """List all servers (guilds) the bot is in."""
