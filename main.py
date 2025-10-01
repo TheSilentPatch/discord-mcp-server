@@ -218,6 +218,26 @@ class DiscordMCP:
         except Exception as e:
             logger.error(f"Failed to remove reaction: {e}")
             return {"error": str(e)}
+    
+    # Lists available channels in a server
+    async def list_channels(self, server_id: int):
+        """List all channels in a server"""
+        try:
+            guild = self.bot.get_guild(server_id)
+            if guild:
+                channels = [{
+                    "id": channel.id,
+                    "name": channel.name,
+                    "type": str(channel.type),
+                    "category_id": channel.category_id
+                } for channel in guild.channels]
+                logger.info(f"Listed {len(channels)} channels in server {server_id}")
+                return channels
+            logger.warning(f"Server not found: {server_id}")
+            return {"error": "Server not found"}
+        except Exception as e:
+            logger.error(f"Failed to list channels: {e}")
+            return {"error": str(e)}
 
 tools = DiscordMCP()
 mcp = FastMCP("discord-mcp")
@@ -254,6 +274,29 @@ async def get_user_info(user_id: int, ctx: Context[ServerSession, None]) -> Dict
         await ctx.info(f"Retrieved info for user {user_id}")
     else:
         await ctx.error(f"Failed to get user info: {result.get('error')}")
+    return result
+
+@mcp.tool()
+async def list_servers(ctx: Context[ServerSession, None]) -> List[Dict[str, Any]]:
+    """List all servers (guilds) the bot is in"""
+    await ctx.info("Listing servers")
+    result = await tools.list_servers()
+    if "error" not in result:
+        await ctx.info(f"Retrieved {len(result)} servers")
+        return result
+    else:
+        await ctx.error(f"Failed to list servers: {result.get('error')}")
+        return []
+
+@mcp.tool()
+async def create_text_channel(server_id: int, name: str, ctx: Context[ServerSession, None], category_id: int = None) -> Dict[str, Any]:
+    """Create a new text channel in a server"""
+    await ctx.info(f"Creating text channel '{name}' in server {server_id}")
+    result = await tools.create_text_channel(server_id, name, category_id)
+    if "error" not in result:
+        await ctx.info(f"Channel '{name}' created with ID {result.get('id')}")
+    else:
+        await ctx.error(f"Failed to create channel: {result.get('error')}")
     return result
 
 # Example usage
