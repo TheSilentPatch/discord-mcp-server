@@ -333,19 +333,25 @@ async def create_text_channel(server_id: int, name: str, ctx: Context[ServerSess
         await ctx.error(f"Failed to create channel: {result.get('error')}")
     return result
 
-# Example usage
-if __name__ == "__main__":
+
+
+async def main():
+    """Main function to start the Discord MCP server in streamable HTTP mode."""
     try:
-        # Initialize the MCP server
-        mcp = DiscordMCP()
         logger.info("Discord MCP server implementation ready")
         
-        # To start the bot, you would use:
-        # asyncio.run(mcp.start())
+        if not os.getenv("DISCORD_TOKEN") or os.getenv("DISCORD_TOKEN") == "your_discord_bot_token_here":
+            logger.warning("No valid DISCORD_TOKEN found. MCP tools will be available but Discord functionality will not work.")
+            logger.warning("Please set a valid DISCORD_TOKEN in your .env file to enable Discord integration.")
         
-        # To start both Discord bot and HTTP server together, use:
-        # python start_server.py
+        logger.info("Starting MCP server in streamable HTTP mode...")
+        logger.info("Server will be available at: http://localhost:8000/mcp")
+        await mcp.run(transport="streamable-http")
         
     except Exception as e:
-        logger.error(f"Failed to initialize Discord MCP: {e}")
+        logger.error(f"Failed to start Discord MCP server: {e}")
         print(f"Error: {e}")
+        raise
+
+if __name__ == "__main__":
+    asyncio.run(main())
