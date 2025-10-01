@@ -6,15 +6,14 @@ from typing import List, Dict, Any
 import asyncio
 from mcp.server.fastmcp import FastMCP, Context
 from mcp.server.session import ServerSession
-
-# Configure logging
+from dotenv import load_dotenv
+load_dotenv()
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger("discord-mcp")
 
-# Discord MCP Server Implementation
 class DiscordMCP:
     def __init__(self):
         self.bot = None
