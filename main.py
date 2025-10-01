@@ -321,7 +321,61 @@ async def create_text_channel(server_id: int, name: str, ctx: Context[ServerSess
         await ctx.error(f"Failed to create channel: {result.get('error')}")
     return result
 
+@mcp.tool()
+async def delete_channel(channel_id: int, ctx: Context[ServerSession, None]) -> Dict[str, Any]:
+    """Delete a channel"""
+    await ctx.info(f"Deleting channel {channel_id}")
+    result = await tools.delete_channel(channel_id)
+    if result.get("status") == "success":
+        await ctx.info(f"Channel {channel_id} deleted successfully")
+    else:
+        await ctx.error(f"Failed to delete channel: {result.get('error')}")
+    return result
 
+@mcp.tool()
+async def add_reaction(channel_id: int, message_id: int, emoji: str, ctx: Context[ServerSession, None]) -> Dict[str, Any]:
+    """Add a reaction to a message"""
+    await ctx.info(f"Adding reaction {emoji} to message {message_id} in channel {channel_id}")
+    result = await tools.add_reaction(channel_id, message_id, emoji)
+    if result.get("status") == "success":
+        await ctx.info(f"Reaction {emoji} added to message {message_id}")
+    else:
+        await ctx.error(f"Failed to add reaction: {result.get('error')}")
+    return result
+
+@mcp.tool()
+async def add_multiple_reactions(channel_id: int, message_id: int, emojis: List[str], ctx: Context[ServerSession, None]) -> Dict[str, Any]:
+    """Add multiple reactions to a message"""
+    await ctx.info(f"Adding reactions {emojis} to message {message_id} in channel {channel_id}")
+    result = await tools.add_multiple_reactions(channel_id, message_id, emojis)
+    if result.get("status") == "success":
+        await ctx.info(f"Reactions {emojis} added to message {message_id}")
+    else:
+        await ctx.error(f"Failed to add reactions: {result.get('error')}")
+    return result
+
+@mcp.tool()
+async def remove_reaction(channel_id: int, message_id: int, emoji: str, ctx: Context[ServerSession, None]) -> Dict[str, Any]:
+    """Remove a reaction from a message"""
+    await ctx.info(f"Removing reaction {emoji} from message {message_id} in channel {channel_id}")
+    result = await tools.remove_reaction(channel_id, message_id, emoji)
+    if result.get("status") == "success":
+        await ctx.info(f"Reaction {emoji} removed from message {message_id}")
+    else:
+        await ctx.error(f"Failed to remove reaction: {result.get('error')}")
+    return result
+
+@mcp.resource("channels://list")
+async def list_channels_resource(server_id: int, ctx: Context[None, None]) -> List[Dict[str, Any]]:
+    """List all channels in a server."""
+    await ctx.info(f"Fetching channel list for server {server_id} via resource")
+    result = await tools.list_channels(server_id)
+    if "error" not in result:
+        await ctx.info(f"Retrieved {len(result)} channels")
+        return result
+    else:
+        await ctx.error(f"Failed to list channels: {result.get('error')}")
+        return []
 
 async def main():
     """Main function to start the Discord MCP server in streamable HTTP mode."""
