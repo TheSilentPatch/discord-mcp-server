@@ -37,7 +37,12 @@ class DiscordMCP:
             logger.info(f"Connected to {len(self.bot.guilds)} servers")
         
         # Start the bot in the background
-        asyncio.create_task(self._start_async())
+        loop = None
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = asyncio.get_event_loop()
+        loop.create_task(self._start_async())
     
     async def _start_async(self):
         """Async part of initialization"""
@@ -365,7 +370,7 @@ async def remove_reaction(channel_id: int, message_id: int, emoji: str, ctx: Con
         await ctx.error(f"Failed to remove reaction: {result.get('error')}")
     return result
 
-@mcp.resource("channels://list")
+@mcp.resource("channels://{server_id}/list")
 async def list_channels_resource(server_id: int, ctx: Context[None, None]) -> List[Dict[str, Any]]:
     """List all channels in a server."""
     await ctx.info(f"Fetching channel list for server {server_id} via resource")
