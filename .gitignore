@@ -54,3 +54,5 @@ sdist/
 var/
 wheels/
 share/python-wheels/
+
+MCP_DOCS.md
