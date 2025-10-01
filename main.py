@@ -4,6 +4,8 @@ from discord.ext import commands
 import logging
 from typing import List, Dict, Any
 import asyncio
+from mcp.server.fastmcp import FastMCP, Context
+from mcp.server.session import ServerSession
 
 # Configure logging
 logging.basicConfig(
@@ -22,23 +24,25 @@ class DiscordMCP:
             logger.error("DISCORD_TOKEN environment variable is required")
             raise ValueError("DISCORD_TOKEN environment variable is required")
         
-    async def start(self):
-        """Initialize and start the Discord bot"""
+        # Initialize the bot immediately
+        intents = discord.Intents.default()
+        intents.message_content = True
+        
+        self.bot = commands.Bot(command_prefix="!", intents=intents)
+        
+        # Register event handlers
+        @self.bot.event
+        async def on_ready():
+            logger.info(f"Logged in as {self.bot.user} (ID: {self.bot.user.id})")
+            logger.info(f"Connected to {len(self.bot.guilds)} servers")
+        
+        # Start the bot in the background
+        asyncio.create_task(self._start_async())
+    
+    async def _start_async(self):
+        """Async part of initialization"""
         try:
-            intents = discord.Intents.default()
-            intents.message_content = True
-            
-            self.bot = commands.Bot(command_prefix="!", intents=intents)
-            
-            # Register event handlers
-            @self.bot.event
-            async def on_ready():
-                logger.info(f"Logged in as {self.bot.user} (ID: {self.bot.user.id})")
-                logger.info(f"Connected to {len(self.bot.guilds)} servers")
-                
-            # Start the bot
             await self.bot.start(self.token)
-            
         except discord.LoginFailure:
             logger.error("Failed to login - invalid token")
             raise
@@ -215,12 +219,49 @@ class DiscordMCP:
             logger.error(f"Failed to remove reaction: {e}")
             return {"error": str(e)}
 
+tools = DiscordMCP()
+mcp = FastMCP("discord-mcp")
+
+@mcp.tool()
+async def send_message(channel_id: int, content:str, ctx: Context[ServerSession, None]) -> str:
+    """Send a message to a specific channel"""
+    await ctx.info(f"Sending message to channel {channel_id}")
+    result = await tools.send_message(channel_id, content)
+    if result.get("status") == "success":
+        await ctx.info(f"Message sent successfully with ID {result.get('message_id')}")
+    else:
+        await ctx.error(f"Failed to send message: {result.get('message')}")
+    return result
+
+@mcp.tool()
+async def read_messages(channel_id: int, ctx: Context[ServerSession, None], limit: int = 10) -> List[Dict[str, Any]]:
+    """Read recent messages from a channel"""
+    await ctx.info(f"Reading up to {limit} messages from channel {channel_id}")
+    result = await tools.read_messages(channel_id, limit)
+    if "messages" in result:
+        await ctx.info(f"Retrieved {len(result['messages'])} messages")
+        return result["messages"]
+    else:
+        await ctx.error(f"Failed to read messages: {result.get('error')}")
+        return []
+
+@mcp.tool()
+async def get_user_info(user_id: int, ctx: Context[ServerSession, None]) -> Dict[str, Any]:
+    """Get information about a specific user"""
+    await ctx.info(f"Getting info for user {user_id}")
+    result = await tools.get_user_info(user_id)
+    if "error" not in result:
+        await ctx.info(f"Retrieved info for user {user_id}")
+    else:
+        await ctx.error(f"Failed to get user info: {result.get('error')}")
+    return result
+
 # Example usage
 if __name__ == "__main__":
     try:
         # Initialize the MCP server
         mcp = DiscordMCP()
-        print("Discord MCP server implementation ready")
+        logger.info("Discord MCP server implementation ready")
         
         # To start the bot, you would use:
         # asyncio.run(mcp.start())
