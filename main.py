@@ -198,6 +198,28 @@ class DiscordMCP:
             logger.error(f"Failed to add reaction: {e}")
             return {"error": str(e)}
     
+    async def add_multiple_reactions(self, channel_id: int, message_id: int, emojis: List[str]):
+        """Add multiple reactions to a message"""
+        try:
+            channel = self.bot.get_channel(channel_id)
+            if channel:
+                message = await channel.fetch_message(message_id)
+                for emoji in emojis:
+                    await message.add_reaction(emoji)
+                logger.info(f"Added reactions {emojis} to message {message_id}")
+                return {"status": "success"}
+            logger.warning(f"Channel not found: {channel_id}")
+            return {"error": "Channel not found"}
+        except discord.NotFound:
+            logger.warning(f"Message not found: {message_id}")
+            return {"error": "Message not found"}
+        except discord.Forbidden:
+            logger.error(f"Permission denied to add reactions to message {message_id}")
+            return {"error": "Permission denied"}
+        except Exception as e:
+            logger.error(f"Failed to add reactions: {e}")
+            return {"error": str(e)}
+    
     async def remove_reaction(self, channel_id: int, message_id: int, emoji: str):
         """Remove a reaction from a message"""
         try:
@@ -276,10 +298,22 @@ async def get_user_info(user_id: int, ctx: Context[ServerSession, None]) -> Dict
         await ctx.error(f"Failed to get user info: {result.get('error')}")
     return result
 
-@mcp.tool()
-async def list_servers(ctx: Context[ServerSession, None]) -> List[Dict[str, Any]]:
-    """List all servers (guilds) the bot is in"""
-    await ctx.info("Listing servers")
+# @mcp.tool()
+# async def list_servers(ctx: Context[ServerSession, None]) -> List[Dict[str, Any]]:
+#     """List all servers (guilds) the bot is in"""
+#     await ctx.info("Listing servers")
+#     result = await tools.list_servers()
+#     if "error" not in result:
+#         await ctx.info(f"Retrieved {len(result)} servers")
+#         return result
+#     else:
+#         await ctx.error(f"Failed to list servers: {result.get('error')}")
+#         return []
+
+@mcp.resource("servers://list")
+async def list_servers_resource(ctx: Context[None, None]) -> List[Dict[str, Any]]:
+    """List all servers (guilds) the bot is in."""
+    await ctx.info("Fetching server list via resource")
     result = await tools.list_servers()
     if "error" not in result:
         await ctx.info(f"Retrieved {len(result)} servers")
