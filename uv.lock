@@ -162,6 +162,7 @@ dependencies = [
     { name = "httpx" },
     { name = "mcp", extra = ["cli"] },
     { name = "py-cord" },
+    { name = "python-dotenv" },
 ]
 
 [package.metadata]
@@ -169,6 +170,7 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "mcp", extras = ["cli"], specifier = ">=1.15.0" },
     { name = "py-cord", specifier = ">=2.6.1" },
+    { name = "python-dotenv", specifier = ">=1.1.1" },
 ]
 
 [[package]]
