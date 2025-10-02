@@ -7,35 +7,34 @@ import asyncio
 from mcp.server.fastmcp import FastMCP, Context
 from mcp.server.session import ServerSession
 from dotenv import load_dotenv
-load_dotenv()
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger("discord-mcp")
 
-class DiscordMCP:
+load_dotenv()
+
+class DiscordMCP(commands.Bot):
     def __init__(self):
-        self.bot = None
         self.token = os.getenv("DISCORD_TOKEN")
         
         if not self.token:
             logger.error("DISCORD_TOKEN environment variable is required")
             raise ValueError("DISCORD_TOKEN environment variable is required")
         
-        # Initialize the bot immediately
-        intents = discord.Intents.default()
-        intents.message_content = True
-        
-        self.bot = commands.Bot(command_prefix="!", intents=intents)
-        
-        # Register event handlers
-        @self.bot.event
+        intents = discord.Intents.all()
+        super().__init__(command_prefix="!", intents=intents)
+
+        @self.event
         async def on_ready():
-            logger.info(f"Logged in as {self.bot.user} (ID: {self.bot.user.id})")
-            logger.info(f"Connected to {len(self.bot.guilds)} servers")
-        
-        # Start the bot in the background
+            logger.info(f"Logged in as {self.user} (ID: {self.user.id})")
+            logger.info(f"Connected to {len(self.guilds)} servers")
+            print("------")
+
+        # start the bot in a separate thread to avoid blocking
+        self._start()
         loop = None
         try:
             loop = asyncio.get_running_loop()
@@ -266,7 +265,7 @@ class DiscordMCP:
             return {"error": str(e)}
 
 tools = DiscordMCP()
-mcp = FastMCP("discord-mcp")
+mcp = FastMCP("discord-mcp", host='0.0.0.0', port=8000)
 
 @mcp.tool()
 async def send_message(channel_id: int, content:str, ctx: Context[ServerSession, None]) -> str:
@@ -400,4 +399,5 @@ async def main():
         raise
 
 if __name__ == "__main__":
+
     asyncio.run(main())
