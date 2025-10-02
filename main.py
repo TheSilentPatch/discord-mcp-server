@@ -35,12 +35,6 @@ class DiscordMCP(commands.Bot):
         
         self._register_commands()
         
-
-    def _register_commands(self):
-        """Register bot commands if needed"""
-        @self.command(name="ping")
-        async def ping(ctx):
-            await ctx.send("Pong!")
     
     async def _start_async(self):
         """Async part of initialization (if you still need it)"""
@@ -57,12 +51,12 @@ class DiscordMCP(commands.Bot):
     async def send_message(self, channel_id: int, content: str):
         """Send a message to a specific channel"""
         try:
-            channel = self.bot.get_channel(channel_id)
+            channel = self.get_channel(channel_id)
             if channel:
                 message = await channel.send(content)
                 logger.info(f"Message sent to channel {channel_id}: {content[:50]}...")
                 return {
-                    "status": "success", 
+                    "status": "success",
                     "message": "Message sent",
                     "message_id": message.id
                 }
@@ -79,7 +73,7 @@ class DiscordMCP(commands.Bot):
     async def read_messages(self, channel_id: int, limit: int = 10):
         """Read recent messages from a channel"""
         try:
-            channel = self.bot.get_channel(channel_id)
+            channel = self.get_channel(channel_id)
             if channel:
                 messages = []
                 async for message in channel.history(limit=limit):
@@ -104,7 +98,7 @@ class DiscordMCP(commands.Bot):
     async def get_user_info(self, user_id: int):
         """Get information about a specific user"""
         try:
-            user = self.bot.get_user(user_id)
+            user = self.get_user(user_id)
             if user:
                 user_info = {
                     "id": user.id,
@@ -130,7 +124,7 @@ class DiscordMCP(commands.Bot):
                 "member_count": guild.member_count,
                 "owner_id": guild.owner_id,
                 "created_at": guild.created_at.isoformat() if guild.created_at else None
-            } for guild in self.bot.guilds]
+            } for guild in self.guilds]
             logger.info(f"Listed {len(servers)} servers")
             return servers
         except Exception as e:
@@ -140,7 +134,7 @@ class DiscordMCP(commands.Bot):
     async def create_text_channel(self, server_id: int, name: str, category_id: int = None):
         """Create a new text channel in a server"""
         try:
-            guild = self.bot.get_guild(server_id)
+            guild = self.get_guild(server_id)
             if guild:
                 category = guild.get_channel(category_id) if category_id else None
                 channel = await guild.create_text_channel(
@@ -167,7 +161,7 @@ class DiscordMCP(commands.Bot):
     async def delete_channel(self, channel_id: int):
         """Delete a channel"""
         try:
-            channel = self.bot.get_channel(channel_id)
+            channel = self.get_channel(channel_id)
             if channel:
                 await channel.delete(reason="Deleted via MCP")
                 logger.info(f"Deleted channel {channel_id}")
@@ -184,7 +178,7 @@ class DiscordMCP(commands.Bot):
     async def add_reaction(self, channel_id: int, message_id: int, emoji: str):
         """Add a reaction to a message"""
         try:
-            channel = self.bot.get_channel(channel_id)
+            channel = self.get_channel(channel_id)
             if channel:
                 message = await channel.fetch_message(message_id)
                 await message.add_reaction(emoji)
@@ -205,7 +199,7 @@ class DiscordMCP(commands.Bot):
     async def add_multiple_reactions(self, channel_id: int, message_id: int, emojis: List[str]):
         """Add multiple reactions to a message"""
         try:
-            channel = self.bot.get_channel(channel_id)
+            channel = self.get_channel(channel_id)
             if channel:
                 message = await channel.fetch_message(message_id)
                 for emoji in emojis:
@@ -227,10 +221,10 @@ class DiscordMCP(commands.Bot):
     async def remove_reaction(self, channel_id: int, message_id: int, emoji: str):
         """Remove a reaction from a message"""
         try:
-            channel = self.bot.get_channel(channel_id)
+            channel = self.get_channel(channel_id)
             if channel:
                 message = await channel.fetch_message(message_id)
-                await message.remove_reaction(emoji, self.bot.user)
+                await message.remove_reaction(emoji, self.user)
                 logger.info(f"Removed reaction {emoji} from message {message_id}")
                 return {"status": "success"}
             logger.warning(f"Channel not found: {channel_id}")
@@ -249,7 +243,7 @@ class DiscordMCP(commands.Bot):
     async def list_channels(self, server_id: int):
         """List all channels in a server"""
         try:
-            guild = self.bot.get_guild(server_id)
+            guild = self.get_guild(server_id)
             if guild:
                 channels = [{
                     "id": channel.id,
@@ -264,6 +258,38 @@ class DiscordMCP(commands.Bot):
         except Exception as e:
             logger.error(f"Failed to list channels: {e}")
             return {"error": str(e)}
+    
+    def _register_commands(self):
+        """Register bot commands if needed"""
+        @self.command(name="ping")
+        async def ping(ctx):
+            await ctx.send("Pong!")
+            logger.info(f"Ping command used by {ctx.author} in {ctx.channel}")
+
+        @self.slash_command(name="servers", description="List servers the bot is in")
+        async def servers(ctx):
+            servers = await self.list_servers()
+            if isinstance(servers, dict) and "error" in servers:
+                await ctx.respond(f"Error: {servers['error']}")
+            else:
+                response = "\n".join([f"{srv['name']} (ID: {srv['id']}, Members: {srv['member_count']})" for srv in servers])
+                await ctx.respond(f"Servers:\n{response}")
+            logger.info(f"Servers command used by {ctx.author} in {ctx.channel}")
+        
+        @self.slash_command(name="userinfo", description="get user info")
+        async def userinfo(ctx, user: discord.Member):
+            user_info = await self.get_user_info(user.id)
+            if isinstance(user_info, dict) and "error" in user_info:
+                await ctx.respond(f"Error: {user_info['error']}")
+            else:
+                response = (f"User Info:\n"
+                            f"Name: {user_info['name']}#{user_info['discriminator']}\n"
+                            f"ID: {user_info['id']}\n"
+                            f"Bot: {user_info['bot']}\n"
+                            f"Created At: {user_info['created_at']}")
+                await ctx.respond(response)
+    
+    
 
 tools = DiscordMCP()
 mcp = FastMCP("discord-mcp", host='0.0.0.0', port=8000)
@@ -291,28 +317,21 @@ async def read_messages(channel_id: int, ctx: Context[ServerSession, None], limi
         await ctx.error(f"Failed to read messages: {result.get('error')}")
         return []
 
-@mcp.tool()
-async def get_user_info(user_id: int, ctx: Context[ServerSession, None]) -> Dict[str, Any]:
-    """Get information about a specific user"""
-    await ctx.info(f"Getting info for user {user_id}")
+@mcp.resource("users://{user_id}/info")
+async def user_info_resource(user_id: int) -> Dict[str, Any]:
+    """
+    Get information about a specific user.
+    Args: user_id (int): The ID of the user to fetch information for.
+    Returns: A dictionary containing user information.
+    """
     result = await tools.get_user_info(user_id)
-    if "error" not in result:
-        await ctx.info(f"Retrieved info for user {user_id}")
-    else:
-        await ctx.error(f"Failed to get user info: {result.get('error')}")
     return result
 
 @mcp.resource("servers://list")
-async def list_servers_resource(ctx: Context[None, None]) -> List[Dict[str, Any]]:
+async def list_servers_resource() -> List[Dict[str, Any]]:
     """List all servers (guilds) the bot is in."""
-    await ctx.info("Fetching server list via resource")
     result = await tools.list_servers()
-    if "error" not in result:
-        await ctx.info(f"Retrieved {len(result)} servers")
-        return result
-    else:
-        await ctx.error(f"Failed to list servers: {result.get('error')}")
-        return []
+    return result
 
 @mcp.tool()
 async def create_text_channel(server_id: int, name: str, ctx: Context[ServerSession, None], category_id: int = None) -> Dict[str, Any]:
@@ -370,16 +389,10 @@ async def remove_reaction(channel_id: int, message_id: int, emoji: str, ctx: Con
     return result
 
 @mcp.resource("channels://{server_id}/list")
-async def list_channels_resource(server_id: int, ctx: Context[None, None]) -> List[Dict[str, Any]]:
+async def list_channels_resource(server_id: int) -> List[Dict[str, Any]]:
     """List all channels in a server."""
-    await ctx.info(f"Fetching channel list for server {server_id} via resource")
     result = await tools.list_channels(server_id)
-    if "error" not in result:
-        await ctx.info(f"Retrieved {len(result)} channels")
-        return result
-    else:
-        await ctx.error(f"Failed to list channels: {result.get('error')}")
-        return []
+    return result
 
 async def main():
     """Main function to start the Discord MCP server in streamable HTTP mode."""
@@ -394,7 +407,7 @@ async def main():
 
         logger.info("Starting MCP server in streamable HTTP mode...")
         logger.info("Server will be available at: http://localhost:8000/mcp")
-        await mcp.run(transport="streamable-http")
+        await mcp.run(transport="streamable-http", host='172.0.0.1', port=8000)
         
     except Exception as e:
         logger.error(f"Failed to start Discord MCP server: {e}")
