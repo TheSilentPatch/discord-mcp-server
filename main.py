@@ -32,20 +32,21 @@ class DiscordMCP(commands.Bot):
             logger.info(f"Logged in as {self.user} (ID: {self.user.id})")
             logger.info(f"Connected to {len(self.guilds)} servers")
             print("------")
+        
+        self._register_commands()
+        
 
-        # start the bot in a separate thread to avoid blocking
-        self._start()
-        loop = None
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = asyncio.get_event_loop()
-        loop.create_task(self._start_async())
+    def _register_commands(self):
+        """Register bot commands if needed"""
+        @self.command(name="ping")
+        async def ping(ctx):
+            await ctx.send("Pong!")
     
     async def _start_async(self):
-        """Async part of initialization"""
+        """Async part of initialization (if you still need it)"""
         try:
-            await self.bot.start(self.token)
+            # use the Bot instance method directly
+            await self.start(self.token)
         except discord.LoginFailure:
             logger.error("Failed to login - invalid token")
             raise
@@ -389,6 +390,8 @@ async def main():
             logger.warning("No valid DISCORD_TOKEN found. MCP tools will be available but Discord functionality will not work.")
             logger.warning("Please set a valid DISCORD_TOKEN in your .env file to enable Discord integration.")
         
+        asyncio.create_task(tools.start(tools.token))
+
         logger.info("Starting MCP server in streamable HTTP mode...")
         logger.info("Server will be available at: http://localhost:8000/mcp")
         await mcp.run(transport="streamable-http")
